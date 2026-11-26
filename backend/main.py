@@ -66,6 +66,11 @@ class WebScanRequest(BaseModel):
     active: bool = False  # active checks require verified ownership
 
 
+class BlockRequest(BaseModel):
+    user_id: int
+    blocked: bool = True
+
+
 def _save_scan(db: Session, user: User, result: dict, target_name: str):
     """Persist a scan result (code or website) for a logged-in user."""
     s = result["summary"]
@@ -125,6 +130,8 @@ def login(req: AuthRequest, db: Session = Depends(get_session)):
     user = db.query(User).filter(User.username == req.username.strip()).first()
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(401, "بيانات الدخول غير صحيحة")
+    if user.is_blocked:
+        raise HTTPException(403, "هذا الحساب محظور")
     user.token = new_token()  # توكن جديد لكل دخول
     db.commit()
     return {"token": user.token, "username": user.username}
@@ -162,6 +169,7 @@ def admin_overview(admin: User = Depends(require_admin), db: Session = Depends(g
             "id": u.id,
             "username": u.username,
             "is_admin": bool(u.is_admin),
+            "is_blocked": bool(u.is_blocked),
             "created_at": u.created_at.isoformat(timespec="seconds"),
             "scan_count": len(scans),
             "scans": [
@@ -177,6 +185,27 @@ def admin_overview(admin: User = Depends(require_admin), db: Session = Depends(g
             ],
         })
     return {"users": out, "total_users": len(out)}
+
+
+@app.post("/api/admin/block")
+def admin_block(
+    req: BlockRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_session),
+):
+    """حظر / فك حظر مستخدم — للأدمن فقط."""
+    target = db.query(User).filter(User.id == req.user_id).first()
+    if not target:
+        raise HTTPException(404, "المستخدم غير موجود")
+    if target.id == admin.id:
+        raise HTTPException(400, "لا يمكنك حظر نفسك")
+    if target.is_admin:
+        raise HTTPException(400, "لا يمكن حظر حساب أدمن")
+    target.is_blocked = bool(req.blocked)
+    if target.is_blocked:
+        target.token = None  # يُسجَّل خروجه فوراً
+    db.commit()
+    return {"id": target.id, "username": target.username, "is_blocked": target.is_blocked}
 
 
 # ---------------------------------------------------------------- الفحص

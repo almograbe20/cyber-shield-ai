@@ -56,8 +56,11 @@
       <div id="codeView">
         <div class="toolbar">
           <input type="text" id="filename" placeholder="File name (optional) e.g. app.py" />
+          <button class="ghost" id="uploadBtn">📁 Upload file</button>
           <button class="ghost" id="sampleBtn">Load vulnerable sample</button>
         </div>
+        <input type="file" id="fileInput"
+          accept=".py,.js,.ts,.jsx,.tsx,.php,.java,.rb,.go,.html,.c,.cpp,.cs,.txt" hidden />
         <textarea id="codeInput" spellcheck="false"
           placeholder="Paste your code here..."></textarea>
         <button class="primary" id="scanBtn">

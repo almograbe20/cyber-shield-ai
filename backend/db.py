@@ -37,6 +37,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)   # pbkdf2$...
     token = Column(String(64), nullable=True, index=True)  # توكن الجلسة الحالي
     is_admin = Column(Boolean, default=False)              # حساب أدمن يرى كل المستخدمين
+    is_blocked = Column(Boolean, default=False)            # مستخدم محظور (لا يستطيع الدخول)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     scans = relationship("Scan", back_populates="user", cascade="all, delete-orphan")

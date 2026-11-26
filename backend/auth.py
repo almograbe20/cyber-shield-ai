@@ -56,7 +56,10 @@ def get_current_user(
     token = authorization.replace("Bearer ", "").strip()
     if not token:
         return None
-    return db.query(User).filter(User.token == token).first()
+    user = db.query(User).filter(User.token == token).first()
+    if user and getattr(user, "is_blocked", False):
+        return None  # محظور: نعامله كغير مسجّل
+    return user
 
 
 def require_user(user: User | None = Depends(get_current_user)) -> User:

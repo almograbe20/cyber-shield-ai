@@ -103,12 +103,18 @@ async function loadAdmin() {
     $("adminPanel").hidden = false;
     const totalScans = d.users.reduce((n, u) => n + u.scan_count, 0);
     $("adminSummary").textContent = `${d.total_users} users · ${totalScans} scans total`;
-    $("adminList").innerHTML = d.users.map((u) => `
-      <div class="admin-user">
+    $("adminList").innerHTML = d.users.map((u) => {
+      const canBlock = !u.is_admin && u.id !== (currentUser && currentUser.id);
+      return `
+      <div class="admin-user ${u.is_blocked ? "blocked" : ""}">
         <div class="admin-user-top" onclick="this.parentElement.classList.toggle('open')">
           <span class="uname ${u.is_admin ? "admin" : ""}">${esc(u.username)}</span>
           ${u.is_admin ? '<span class="admin-badge">ADMIN</span>' : ""}
+          ${u.is_blocked ? '<span class="blocked-badge">BLOCKED</span>' : ""}
           <span class="umeta">${u.scan_count} scan(s) · joined ${fmtDate(u.created_at)}</span>
+          ${canBlock ? `<button class="block-btn ${u.is_blocked ? "unblock" : ""}"
+             onclick="event.stopPropagation(); toggleBlock(${u.id}, ${!u.is_blocked})">
+             ${u.is_blocked ? "Unblock" : "Block"}</button>` : ""}
         </div>
         <div class="admin-user-scans">
           ${u.scans.length ? u.scans.map((s) => `
@@ -118,9 +124,25 @@ async function loadAdmin() {
               <span class="sd">${fmtDate(s.created_at)}</span>
             </div>`).join("") : '<div class="admin-scan none">No scans yet.</div>'}
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
   } catch {}
 }
+
+async function toggleBlock(userId, blocked) {
+  if (blocked && !confirm("Block this user? They will be signed out and unable to log in.")) return;
+  try {
+    const r = await fetch("/api/admin/block", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ user_id: userId, blocked }),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.detail || "Error"); return; }
+    loadAdmin();
+  } catch { alert("Could not update the user."); }
+}
+window.toggleBlock = toggleBlock;
 
 // ---------- auth modal ----------
 let authMode = "login";
@@ -165,6 +187,22 @@ async function logout() {
 
 // ---------- scanning ----------
 $("sampleBtn").onclick = () => { $("codeInput").value = SAMPLE; $("filename").value = "app.py"; };
+
+// upload a code file from the device -> read it into the editor
+$("uploadBtn").onclick = () => $("fileInput").click();
+$("fileInput").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) { alert("File too large (max 1 MB)."); e.target.value = ""; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    $("codeInput").value = reader.result;
+    $("filename").value = file.name;
+  };
+  reader.onerror = () => alert("Could not read the file.");
+  reader.readAsText(file);
+  e.target.value = "";  // allow re-uploading the same file
+};
 
 $("scanBtn").onclick = async () => {
   const code = $("codeInput").value.trim();

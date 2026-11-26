@@ -26,13 +26,17 @@ DEFAULT_ADMIN_PASSWORD = "admin123"
 
 
 def _ensure_schema():
-    """Add the is_admin column to pre-existing databases (no-op if it exists)."""
-    with engine.connect() as conn:
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"))
-            conn.commit()
-        except Exception:
-            pass  # column already exists → fine
+    """Add new columns to pre-existing databases (no-op if they already exist)."""
+    for column_sql in (
+        "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN is_blocked BOOLEAN DEFAULT 0",
+    ):
+        with engine.connect() as conn:
+            try:
+                conn.execute(text(column_sql))
+                conn.commit()
+            except Exception:
+                pass  # column already exists → fine
 
 
 def ensure_admin():

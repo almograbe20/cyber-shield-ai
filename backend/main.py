@@ -33,9 +33,10 @@ from backend.web_scanner import scan_website, ownership_token, verify_ownership,
 from backend.db import init_db, get_session, User, Scan
 from backend.auth import (
     hash_password, verify_password, new_token,
-    get_current_user, require_user,
+    get_current_user, require_user, require_admin,
 )
 from backend.rate_limit import scan_rate_limit
+from backend.bootstrap import ensure_admin
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
@@ -45,7 +46,8 @@ app = FastAPI(title="Cyber Shield AI", version="0.4.0 (Website Scan)")
 
 @app.on_event("startup")
 def _startup():
-    init_db()  # ينشئ الجداول إن لم تكن موجودة
+    init_db()        # ينشئ الجداول إن لم تكن موجودة
+    ensure_admin()   # ينشئ حساب الأدمن إن لم يكن موجوداً
 
 
 # ---------------------------------------------------------------- نماذج الطلبات
@@ -139,7 +141,42 @@ def logout(user: User = Depends(require_user), db: Session = Depends(get_session
 def me(user: User | None = Depends(get_current_user)):
     if not user:
         return {"user": None}
-    return {"user": {"id": user.id, "username": user.username}}
+    return {"user": {"id": user.id, "username": user.username,
+                     "is_admin": bool(user.is_admin)}}
+
+
+# ---------------------------------------------------------------- لوحة الأدمن
+@app.get("/api/admin/overview")
+def admin_overview(admin: User = Depends(require_admin), db: Session = Depends(get_session)):
+    """كل المستخدمين مع فحوصاتهم — للأدمن فقط."""
+    users = db.query(User).order_by(User.created_at).all()
+    out = []
+    for u in users:
+        scans = (
+            db.query(Scan)
+            .filter(Scan.user_id == u.id)
+            .order_by(Scan.created_at.desc())
+            .all()
+        )
+        out.append({
+            "id": u.id,
+            "username": u.username,
+            "is_admin": bool(u.is_admin),
+            "created_at": u.created_at.isoformat(timespec="seconds"),
+            "scan_count": len(scans),
+            "scans": [
+                {
+                    "id": s.id,
+                    "target": s.filename,
+                    "language": s.language,
+                    "security_score": s.security_score,
+                    "total_findings": s.total_findings,
+                    "created_at": s.created_at.isoformat(timespec="seconds"),
+                }
+                for s in scans
+            ],
+        })
+    return {"users": out, "total_users": len(out)}
 
 
 # ---------------------------------------------------------------- الفحص

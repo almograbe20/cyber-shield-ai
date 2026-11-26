@@ -64,3 +64,10 @@ def require_user(user: User | None = Depends(get_current_user)) -> User:
     if user is None:
         raise HTTPException(status_code=401, detail="مطلوب تسجيل الدخول")
     return user
+
+
+def require_admin(user: User = Depends(require_user)) -> User:
+    """يرفض الطلب إن لم يكن المستخدم أدمن."""
+    if not getattr(user, "is_admin", False):
+        raise HTTPException(status_code=403, detail="صلاحية الأدمن مطلوبة")
+    return user

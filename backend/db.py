@@ -13,7 +13,7 @@ import datetime
 from pathlib import Path
 
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, DateTime, ForeignKey, JSON
+    create_engine, Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
@@ -36,6 +36,7 @@ class User(Base):
     username = Column(String(64), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)   # pbkdf2$...
     token = Column(String(64), nullable=True, index=True)  # توكن الجلسة الحالي
+    is_admin = Column(Boolean, default=False)              # حساب أدمن يرى كل المستخدمين
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     scans = relationship("Scan", back_populates="user", cascade="all, delete-orphan")

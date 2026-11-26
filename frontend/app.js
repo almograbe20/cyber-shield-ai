@@ -56,11 +56,11 @@ async function loadAiStatus() {
     if (d.mode === "claude") {
       chip.textContent = "🤖 Claude API";
       chip.className = "ai-chip claude";
-      chip.title = "Real AI analysis via Claude API";
+      chip.title = "AI analysis via Claude API";
     } else {
-      chip.textContent = "🤖 Local AI (hybrid)";
+      chip.textContent = "🤖 AI";
       chip.className = "ai-chip";
-      chip.title = "Local analysis. Set ANTHROPIC_API_KEY to enable Claude API.";
+      chip.title = "Built-in AI analysis. Set ANTHROPIC_API_KEY to use Claude API.";
     }
   } catch { chip.textContent = "🤖 —"; }
 }
@@ -79,17 +79,47 @@ async function loadMe() {
 function renderAuthArea(user) {
   const area = $("authArea");
   if (user) {
+    const badge = user.is_admin ? '<span class="admin-badge">ADMIN</span>' : "";
     area.innerHTML = `
-      <span class="user-chip">👤 <span class="uname">${esc(user.username)}</span></span>
+      <span class="user-chip">👤 <span class="uname">${esc(user.username)}</span> ${badge}</span>
       <button class="ghost" id="logoutBtn">Sign out</button>`;
     $("logoutBtn").onclick = logout;
     $("historyPanel").hidden = false;
+    if (user.is_admin) { loadAdmin(); } else { $("adminPanel").hidden = true; }
   } else {
     area.innerHTML = `<button class="ghost" id="loginBtn">Sign in</button>`;
     $("loginBtn").onclick = openAuth;
     $("historyPanel").hidden = true;
     $("trendPanel").hidden = true;
+    $("adminPanel").hidden = true;
   }
+}
+
+// ---------- admin panel ----------
+async function loadAdmin() {
+  try {
+    const d = await (await fetch("/api/admin/overview", { headers: authHeaders() })).json();
+    if (!d.users) return;
+    $("adminPanel").hidden = false;
+    const totalScans = d.users.reduce((n, u) => n + u.scan_count, 0);
+    $("adminSummary").textContent = `${d.total_users} users · ${totalScans} scans total`;
+    $("adminList").innerHTML = d.users.map((u) => `
+      <div class="admin-user">
+        <div class="admin-user-top" onclick="this.parentElement.classList.toggle('open')">
+          <span class="uname ${u.is_admin ? "admin" : ""}">${esc(u.username)}</span>
+          ${u.is_admin ? '<span class="admin-badge">ADMIN</span>' : ""}
+          <span class="umeta">${u.scan_count} scan(s) · joined ${fmtDate(u.created_at)}</span>
+        </div>
+        <div class="admin-user-scans">
+          ${u.scans.length ? u.scans.map((s) => `
+            <div class="admin-scan">
+              <span class="sc" style="color:${scoreColor(s.security_score)}">${s.security_score}</span>
+              <span class="st">${esc(s.target || "untitled")} <span class="sd">· ${esc(s.language)} · ${s.total_findings} issue(s)</span></span>
+              <span class="sd">${fmtDate(s.created_at)}</span>
+            </div>`).join("") : '<div class="admin-scan none">No scans yet.</div>'}
+        </div>
+      </div>`).join("");
+  } catch {}
 }
 
 // ---------- auth modal ----------
@@ -174,7 +204,7 @@ function renderResult(data) {
     <div class="stat medium"><div class="num">${s.medium || 0}</div><div class="label">Medium</div></div>
     <div class="stat low"><div class="num">${s.low || 0}</div><div class="label">Low</div></div>`;
   $("aiSummary").textContent = data.ai_summary || "";
-  $("modeTag").textContent = data.ai_mode === "claude" ? "Claude API analysis" : "Local analysis (hybrid)";
+  $("modeTag").textContent = data.ai_mode === "claude" ? "Claude API analysis" : "AI analysis";
 
   const evidenceLabel = data.language === "website" ? "Evidence" : "Detected code";
   const list = $("findingsList");

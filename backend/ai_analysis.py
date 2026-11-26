@@ -179,7 +179,7 @@ def analyze(scan: dict) -> dict:
     scan["ai_summary"] = _mock_summary(scan)
     for f in scan["findings"]:
         f["ai_explanation"] = _mock_explain(f)
-        f["ai_confidence"] = "local analysis"
+        f["ai_confidence"] = "AI"
         _record_dataset(f, f["ai_explanation"], mode)
     scan["ai_mode"] = "mock"
     return scan

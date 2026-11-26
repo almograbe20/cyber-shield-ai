@@ -24,7 +24,10 @@
       <div class="ai-chip" id="aiChip" title="AI analysis mode">🤖 …</div>
       <div class="status-chip" id="healthChip">● connecting…</div>
       <div class="auth-area" id="authArea">
-        <button class="ghost" id="loginBtn">Sign in</button>
+        <div class="settings-menu">
+          <button class="ghost settings-btn" id="settingsBtn">⚙ Settings ▾</button>
+          <div class="settings-dropdown" id="settingsDropdown" hidden></div>
+        </div>
       </div>
     </div>
   </header>
@@ -41,6 +44,15 @@
       <p class="auth-error" id="authError"></p>
       <button class="primary" id="authSubmit">Sign in</button>
       <button class="modal-close" id="authClose">✕</button>
+    </div>
+  </div>
+
+  <!-- Blocked users modal (admin) -->
+  <div class="modal-backdrop" id="blockedModal" hidden>
+    <div class="modal">
+      <h3 class="modal-title">🚫 Blocked users</h3>
+      <div class="blocked-list" id="blockedList"></div>
+      <button class="modal-close" id="blockedClose">✕</button>
     </div>
   </div>
 

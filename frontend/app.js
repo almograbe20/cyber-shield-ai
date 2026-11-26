@@ -78,22 +78,80 @@ async function loadMe() {
 
 function renderAuthArea(user) {
   const area = $("authArea");
+  let items = "";
   if (user) {
     const badge = user.is_admin ? '<span class="admin-badge">ADMIN</span>' : "";
-    area.innerHTML = `
-      <span class="user-chip">👤 <span class="uname">${esc(user.username)}</span> ${badge}</span>
-      <button class="ghost" id="logoutBtn">Sign out</button>`;
-    $("logoutBtn").onclick = logout;
-    $("historyPanel").hidden = false;
-    if (user.is_admin) { loadAdmin(); } else { $("adminPanel").hidden = true; }
+    items += `<div class="dd-label">👤 ${esc(user.username)} ${badge}</div>`;
+    if (user.is_admin) {
+      items += `<button class="dd-item" data-act="blocked">🚫 Blocked users</button>`;
+    }
+    items += `<button class="dd-item" data-act="logout">🚪 Sign out</button>`;
   } else {
-    area.innerHTML = `<button class="ghost" id="loginBtn">Sign in</button>`;
-    $("loginBtn").onclick = openAuth;
+    items += `<button class="dd-item" data-act="login">🔑 Login</button>`;
+    items += `<button class="dd-item" data-act="register">✨ Sign up</button>`;
+  }
+  area.innerHTML = `
+    <div class="settings-menu">
+      <button class="ghost settings-btn" id="settingsBtn">⚙ Settings ▾</button>
+      <div class="settings-dropdown" id="settingsDropdown" hidden>${items}</div>
+    </div>`;
+
+  $("settingsBtn").onclick = (e) => {
+    e.stopPropagation();
+    const dd = $("settingsDropdown");
+    dd.hidden = !dd.hidden;
+  };
+  area.querySelectorAll(".dd-item").forEach((btn) => {
+    btn.onclick = () => {
+      $("settingsDropdown").hidden = true;
+      const act = btn.dataset.act;
+      if (act === "login") openAuth("login");
+      else if (act === "register") openAuth("register");
+      else if (act === "logout") logout();
+      else if (act === "blocked") showBlockedUsers();
+    };
+  });
+
+  // panels
+  if (user) {
+    $("historyPanel").hidden = false;
+    if (user.is_admin) loadAdmin(); else $("adminPanel").hidden = true;
+  } else {
     $("historyPanel").hidden = true;
     $("trendPanel").hidden = true;
     $("adminPanel").hidden = true;
   }
 }
+
+// close the dropdown when clicking anywhere else
+document.addEventListener("click", (e) => {
+  const dd = $("settingsDropdown");
+  if (dd && !dd.hidden && !e.target.closest(".settings-menu")) dd.hidden = true;
+});
+
+// ---------- blocked users modal ----------
+async function showBlockedUsers() {
+  try {
+    const d = await (await fetch("/api/admin/overview", { headers: authHeaders() })).json();
+    const blocked = (d.users || []).filter((u) => u.is_blocked);
+    const list = $("blockedList");
+    list.innerHTML = blocked.length
+      ? blocked.map((u) => `
+        <div class="blocked-row">
+          <span class="bu">${esc(u.username)}</span>
+          <button class="block-btn unblock" onclick="unblockFromModal(${u.id})">Unblock</button>
+        </div>`).join("")
+      : '<p class="dim" style="padding:8px">No blocked users.</p>';
+    $("blockedModal").hidden = false;
+  } catch { alert("Could not load blocked users."); }
+}
+window.showBlockedUsers = showBlockedUsers;
+
+async function unblockFromModal(userId) {
+  await toggleBlock(userId, false, true);
+  showBlockedUsers();  // refresh the modal
+}
+window.unblockFromModal = unblockFromModal;
 
 // ---------- admin panel ----------
 async function loadAdmin() {
@@ -129,8 +187,8 @@ async function loadAdmin() {
   } catch {}
 }
 
-async function toggleBlock(userId, blocked) {
-  if (blocked && !confirm("Block this user? They will be signed out and unable to log in.")) return;
+async function toggleBlock(userId, blocked, skipConfirm) {
+  if (blocked && !skipConfirm && !confirm("Block this user? They will be signed out and unable to log in.")) return;
   try {
     const r = await fetch("/api/admin/block", {
       method: "POST",
@@ -146,7 +204,11 @@ window.toggleBlock = toggleBlock;
 
 // ---------- auth modal ----------
 let authMode = "login";
-function openAuth() { $("authModal").hidden = false; $("authError").textContent = ""; }
+function openAuth(mode) {
+  $("authModal").hidden = false;
+  $("authError").textContent = "";
+  setMode(mode === "register" ? "register" : "login");
+}
 function closeAuth() { $("authModal").hidden = true; }
 
 function setMode(mode) {
@@ -433,7 +495,8 @@ $("authSubmit").onclick = submitAuth;
 $("authClose").onclick = closeAuth;
 $("authModal").onclick = (e) => { if (e.target === $("authModal")) closeAuth(); };
 $("authPass").addEventListener("keydown", (e) => { if (e.key === "Enter") submitAuth(); });
-$("loginBtn") && ($("loginBtn").onclick = openAuth);
+$("blockedClose").onclick = () => { $("blockedModal").hidden = true; };
+$("blockedModal").onclick = (e) => { if (e.target === $("blockedModal")) $("blockedModal").hidden = true; };
 
 checkHealth();
 loadAiStatus();

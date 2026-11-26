@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Shield AI — AI-Powered Vulnerability Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🛡️</div>
+      <div>
+        <h1>Cyber Shield <span class="accent">AI</span></h1>
+        <p class="tagline">AI-powered security vulnerability detection &amp; analysis</p>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="ai-chip" id="aiChip" title="AI analysis mode">🤖 …</div>
+      <div class="status-chip" id="healthChip">● connecting…</div>
+      <div class="auth-area" id="authArea">
+        <button class="ghost" id="loginBtn">Sign in</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sign in / Register modal -->
+  <div class="modal-backdrop" id="authModal" hidden>
+    <div class="modal">
+      <div class="modal-tabs">
+        <button class="tab active" data-mode="login" id="tabLogin">Sign in</button>
+        <button class="tab" data-mode="register" id="tabRegister">New account</button>
+      </div>
+      <input type="text" id="authUser" placeholder="Username" />
+      <input type="password" id="authPass" placeholder="Password" />
+      <p class="auth-error" id="authError"></p>
+      <button class="primary" id="authSubmit">Sign in</button>
+      <button class="modal-close" id="authClose">✕</button>
+    </div>
+  </div>
+
+  <main class="container">
+    <!-- Input panel -->
+    <section class="panel input-panel">
+      <div class="scan-tabs">
+        <button class="scan-tab active" id="tabCode">💻 Code Scan</button>
+        <button class="scan-tab" id="tabWeb">🌐 Website Scan</button>
+      </div>
+
+      <!-- Code scan view -->
+      <div id="codeView">
+        <div class="toolbar">
+          <input type="text" id="filename" placeholder="File name (optional) e.g. app.py" />
+          <button class="ghost" id="sampleBtn">Load vulnerable sample</button>
+        </div>
+        <textarea id="codeInput" spellcheck="false"
+          placeholder="Paste your code here..."></textarea>
+        <button class="primary" id="scanBtn">
+          <span class="btn-label">🔍 Run scan</span>
+        </button>
+      </div>
+
+      <!-- Website scan view -->
+      <div id="webView" hidden>
+        <div class="toolbar">
+          <input type="text" id="urlInput" placeholder="https://your-website.com" />
+        </div>
+        <label class="active-toggle">
+          <input type="checkbox" id="activeToggle" />
+          Active scan (probes sensitive paths — requires verified ownership)
+        </label>
+        <button class="primary" id="webScanBtn">
+          <span class="btn-label">🌐 Scan website</span>
+        </button>
+        <p class="web-note">Passive checks (headers, TLS, cookies) are safe and legal on any site.
+          Active checks run only on sites you have verified you own.</p>
+        <div class="verify-box" id="verifyBox" hidden></div>
+      </div>
+
+      <p class="save-note" id="saveNote"></p>
+    </section>
+
+    <!-- Results panel -->
+    <section class="panel results-panel" id="resultsPanel" hidden>
+      <div class="results-top">
+        <button class="ghost small" id="exportBtn">⬇ Export PDF</button>
+      </div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div class="ai-summary" id="aiSummary"></div>
+      <div class="findings-head">
+        <h2>Detected vulnerabilities</h2>
+        <span class="mode-tag" id="modeTag"></span>
+      </div>
+      <div class="findings" id="findingsList"></div>
+    </section>
+
+    <!-- Security score trend -->
+    <section class="panel trend-panel" id="trendPanel" hidden>
+      <div class="panel-head">
+        <h2>📈 Security score over time</h2>
+        <span class="hint">Your progress across scans</span>
+      </div>
+      <div class="trend-chart" id="trendChart"></div>
+    </section>
+
+    <!-- Scan history -->
+    <section class="panel history-panel" id="historyPanel" hidden>
+      <div class="panel-head">
+        <h2>📋 Scan history</h2>
+        <span class="hint">Your previous scans — click to view the report</span>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </section>
+
+    <!-- Empty state -->
+    <section class="empty" id="emptyState">
+      <div class="empty-icon">🧪</div>
+      <p>No scan yet. Paste some code and press “Run scan”.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Cyber Shield AI — graduation project</span>
+    <span class="dim">Phase 3: Hybrid AI + score trend + PDF export ✓ · Next: live website (attack) scanning</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

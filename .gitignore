@@ -1,0 +1,11 @@
+# البيئة الافتراضية والمكتبات
+.venv/
+__pycache__/
+*.pyc
+
+# قاعدة البيانات وبيانات التدريب (تُنشأ تلقائياً)
+backend/vulnscan.db
+backend/dataset.jsonl
+
+# أسرار البيئة
+.env

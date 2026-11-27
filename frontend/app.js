@@ -125,13 +125,25 @@ function renderAuthArea(user) {
   if (user) {
     $("historyPanel").hidden = false;
     $("saveNote").textContent = "";
-    if (user.is_admin) loadAdmin(); else $("adminPanel").hidden = true;
+    if (user.is_admin) { loadAdmin(); startAdminAutoRefresh(); }
+    else { $("adminPanel").hidden = true; stopAdminAutoRefresh(); }
   } else {
     $("historyPanel").hidden = true;
     $("trendPanel").hidden = true;
     $("adminPanel").hidden = true;
     $("saveNote").textContent = "🔒 Sign in to use the scanner.";
+    stopAdminAutoRefresh();
   }
+}
+
+// auto-refresh the admin panel so new users / scans appear live
+let adminTimer = null;
+function startAdminAutoRefresh() {
+  if (adminTimer) return;
+  adminTimer = setInterval(() => { if (!$("adminPanel").hidden) loadAdmin(); }, 15000);
+}
+function stopAdminAutoRefresh() {
+  if (adminTimer) { clearInterval(adminTimer); adminTimer = null; }
 }
 
 // close the dropdown when clicking anywhere else
@@ -185,8 +197,9 @@ async function loadAdmin() {
           ${u.is_blocked ? '<span class="blocked-badge">BLOCKED</span>' : ""}
           <span class="umeta">${u.scan_count} scan(s) · joined ${fmtDate(u.created_at)}</span>
           ${canBlock ? `<button class="block-btn ${u.is_blocked ? "unblock" : ""}"
+             title="${u.is_blocked ? "Unblock user" : "Block user"}"
              onclick="event.stopPropagation(); toggleBlock(${u.id}, ${!u.is_blocked})">
-             ${u.is_blocked ? "Unblock" : "Block"}</button>` : ""}
+             ${u.is_blocked ? "↺" : "✕"}</button>` : ""}
         </div>
         <div class="admin-user-scans">
           ${u.scans.length ? u.scans.map((s) => `
@@ -513,6 +526,7 @@ $("authModal").onclick = (e) => { if (e.target === $("authModal")) closeAuth(); 
 $("authPass").addEventListener("keydown", (e) => { if (e.key === "Enter") submitAuth(); });
 $("blockedClose").onclick = () => { $("blockedModal").hidden = true; };
 $("blockedModal").onclick = (e) => { if (e.target === $("blockedModal")) $("blockedModal").hidden = true; };
+$("adminRefresh").onclick = loadAdmin;
 
 checkHealth();
 loadAiStatus();

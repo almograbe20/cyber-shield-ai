@@ -36,6 +36,15 @@ function authHeaders() {
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
+// require sign-in before using the scanner
+function requireLogin() {
+  if (!token) {
+    openAuth("login");
+    return false;
+  }
+  return true;
+}
+
 // ---------- server health + AI mode ----------
 async function checkHealth() {
   const chip = $("healthChip");
@@ -83,7 +92,7 @@ function renderAuthArea(user) {
     const badge = user.is_admin ? '<span class="admin-badge">ADMIN</span>' : "";
     items += `<div class="dd-label">👤 ${esc(user.username)} ${badge}</div>`;
     if (user.is_admin) {
-      items += `<button class="dd-item" data-act="blocked">🚫 Blocked users</button>`;
+      items += `<button class="dd-item" data-act="blocked">🚫 Blocked users <span class="dd-count" id="blockedCountBadge" hidden></span></button>`;
     }
     items += `<button class="dd-item" data-act="logout">🚪 Sign out</button>`;
   } else {
@@ -112,14 +121,16 @@ function renderAuthArea(user) {
     };
   });
 
-  // panels
+  // panels + sign-in hint
   if (user) {
     $("historyPanel").hidden = false;
+    $("saveNote").textContent = "";
     if (user.is_admin) loadAdmin(); else $("adminPanel").hidden = true;
   } else {
     $("historyPanel").hidden = true;
     $("trendPanel").hidden = true;
     $("adminPanel").hidden = true;
+    $("saveNote").textContent = "🔒 Sign in to use the scanner.";
   }
 }
 
@@ -160,7 +171,10 @@ async function loadAdmin() {
     if (!d.users) return;
     $("adminPanel").hidden = false;
     const totalScans = d.users.reduce((n, u) => n + u.scan_count, 0);
-    $("adminSummary").textContent = `${d.total_users} users · ${totalScans} scans total`;
+    const blockedCount = d.users.filter((u) => u.is_blocked).length;
+    $("adminSummary").textContent = `${d.total_users} users · ${totalScans} scans total · ${blockedCount} blocked`;
+    const badge = $("blockedCountBadge");
+    if (badge) { badge.textContent = blockedCount; badge.hidden = blockedCount === 0; }
     $("adminList").innerHTML = d.users.map((u) => {
       const canBlock = !u.is_admin && u.id !== (currentUser && currentUser.id);
       return `
@@ -251,7 +265,7 @@ async function logout() {
 $("sampleBtn").onclick = () => { $("codeInput").value = SAMPLE; $("filename").value = "app.py"; };
 
 // upload a code file from the device -> read it into the editor
-$("uploadBtn").onclick = () => $("fileInput").click();
+$("uploadBtn").onclick = () => { if (!requireLogin()) return; $("fileInput").click(); };
 $("fileInput").onchange = (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -267,6 +281,7 @@ $("fileInput").onchange = (e) => {
 };
 
 $("scanBtn").onclick = async () => {
+  if (!requireLogin()) return;
   const code = $("codeInput").value.trim();
   if (!code) { alert("Paste some code first"); return; }
   const btn = $("scanBtn");
@@ -446,6 +461,7 @@ $("tabWeb").onclick = () => showScanTab("web");
 
 // ---------- website scan ----------
 $("webScanBtn").onclick = async () => {
+  if (!requireLogin()) return;
   const url = $("urlInput").value.trim();
   if (!url) { alert("Enter a website URL first"); return; }
   const active = $("activeToggle").checked;

@@ -27,10 +27,10 @@ def main():
     out.append(f"register: {st} user={d.get('username')}")
     assert st == 200 and d.get("token"), d
     token = d["token"]
-    # 2) فحص مجهول (بدون توكن) -> لا يُحفظ
+    # 2) فحص مجهول (بدون توكن) -> مرفوض (401: تسجيل الدخول إلزامي)
     st, d = call("POST", "/api/scan", {"code": SAMPLE, "filename": "a.py"})
-    out.append(f"anon scan: {st} saved={d.get('saved')} findings={d.get('total_findings')}")
-    assert st == 200 and d.get("saved") is False
+    out.append(f"anon scan: {st} (expected 401 — login required)")
+    assert st == 401
     # 3) فحص مسجّل -> يُحفظ
     st, d = call("POST", "/api/scan", {"code": SAMPLE, "filename": "login.py"}, token)
     out.append(f"auth scan: {st} saved={d.get('saved')} id={d.get('scan_id')} score={d.get('security_score')}")

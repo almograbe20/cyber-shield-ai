@@ -213,7 +213,7 @@ def admin_block(
 def scan(
     req: ScanRequest,
     db: Session = Depends(get_session),
-    user: User | None = Depends(get_current_user),
+    user: User = Depends(require_user),   # تسجيل الدخول إلزامي
     _rl: None = Depends(scan_rate_limit),
 ):
     if not req.code.strip():
@@ -223,31 +223,9 @@ def scan(
     result = scan_code(req.code, req.filename)
     result = analyze(result)
 
-    # 3) الحفظ في القاعدة (فقط للمستخدمين المسجّلين)
-    if user:
-        s = result["summary"]
-        rec = Scan(
-            user_id=user.id,
-            filename=req.filename or "",
-            language=result["language"],
-            lines_scanned=result["lines_scanned"],
-            total_findings=result["total_findings"],
-            security_score=result["security_score"],
-            critical=s.get("critical", 0),
-            high=s.get("high", 0),
-            medium=s.get("medium", 0),
-            low=s.get("low", 0),
-            ai_summary=result.get("ai_summary", ""),
-            result_json=result,
-        )
-        db.add(rec)
-        db.commit()
-        db.refresh(rec)
-        result["scan_id"] = rec.id
-        result["saved"] = True
-    else:
-        result["saved"] = False  # زائر: لا يُحفظ
-
+    # 3) الحفظ في القاعدة
+    result["scan_id"] = _save_scan(db, user, result, target_name=req.filename or "")
+    result["saved"] = True
     return result
 
 
@@ -278,7 +256,7 @@ def site_token(url: str, user: User = Depends(require_user)):
 def web_scan(
     req: WebScanRequest,
     db: Session = Depends(get_session),
-    user: User | None = Depends(get_current_user),
+    user: User = Depends(require_user),   # تسجيل الدخول إلزامي
     _rl: None = Depends(scan_rate_limit),
 ):
     url = normalize_url(req.url)
@@ -289,8 +267,6 @@ def web_scan(
     verification = None
     if active:
         # Active checks are gated behind ownership verification
-        if not user:
-            raise HTTPException(401, "Active scan requires sign-in")
         token = ownership_token(user.id, url)
         verification = verify_ownership(url, token)
         if not verification.get("verified"):
@@ -309,12 +285,9 @@ def web_scan(
     if verification:
         result["ownership"] = verification
 
-    # 3) save for logged-in users
-    if user:
-        result["scan_id"] = _save_scan(db, user, result, target_name=url)
-        result["saved"] = True
-    else:
-        result["saved"] = False
+    # 3) save
+    result["scan_id"] = _save_scan(db, user, result, target_name=url)
+    result["saved"] = True
     return result
 
 

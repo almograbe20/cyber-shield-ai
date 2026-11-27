@@ -313,6 +313,12 @@ button { cursor: pointer; font-family: inherit; transition: all .18s ease; }
   cursor: pointer; width: 100%; transition: all .12s ease;
 }
 .dd-item:hover { background: rgba(255,255,255,.05); color: var(--accent); }
+.dd-count {
+  display: inline-block; min-width: 18px; text-align: center;
+  background: var(--critical); color: #fff; font-size: 11px; font-weight: 700;
+  border-radius: 999px; padding: 1px 6px; margin-left: 6px;
+}
+.dd-count[hidden] { display: none; }
 
 /* Blocked users modal */
 .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
